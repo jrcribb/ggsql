@@ -144,7 +144,10 @@ fn validate(layers: &[Layer], layer_schemas: &[Schema]) -> Result<()> {
 
 /// Check if an aesthetic value is a null sentinel (explicit removal marker)
 fn is_null_sentinel(value: &AestheticValue) -> bool {
-    matches!(value, AestheticValue::Literal(crate::plot::ParameterValue::Null))
+    matches!(
+        value,
+        AestheticValue::Literal(crate::plot::ParameterValue::Null)
+    )
 }
 
 /// Merge global mappings into layer aesthetics and expand wildcards
@@ -887,7 +890,7 @@ pub struct PreparedData {
 /// * `reader` - A Reader implementation for executing SQL
 pub fn prepare_data_with_reader<R: Reader>(query: &str, reader: &R) -> Result<PreparedData> {
     let execute_query = |sql: &str| reader.execute_sql(sql);
-    let type_names = reader.sql_type_names();
+    let dialect = reader.dialect();
 
     // Parse once and create SourceTree
     let source_tree = parser::SourceTree::new(query)?;
@@ -1025,7 +1028,7 @@ pub fn prepare_data_with_reader<R: Reader>(query: &str, reader: &R) -> Result<Pr
 
     // Determine which columns need type casting
     let type_requirements =
-        casting::determine_type_requirements(&specs[0], &layer_type_info, &type_names);
+        casting::determine_type_requirements(&specs[0], &layer_type_info, dialect);
 
     // Update type info with post-cast dtypes
     // This ensures subsequent schema extraction and scale resolution see the correct types
@@ -1094,7 +1097,7 @@ pub fn prepare_data_with_reader<R: Reader>(query: &str, reader: &R) -> Result<Pr
             &layer_base_queries[idx],
             &layer_schemas[idx],
             &scales,
-            &type_names,
+            dialect,
             &execute_query,
         )?;
         layer_queries.push(layer_query);
