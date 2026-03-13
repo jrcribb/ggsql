@@ -26,12 +26,11 @@ website:
   twitter-card:
     card-style: summary
   open-graph: true
-  search: true
+  search:
+    keyboard-shortcut: []
   navbar:
     left:
-      - href: index.qmd
-        text: Home
-      - installation.qmd
+      - get_started.qmd
       - text: Syntax
         menu:
           - text: Overview
