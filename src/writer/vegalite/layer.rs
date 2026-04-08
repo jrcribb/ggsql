@@ -1308,11 +1308,23 @@ impl GeomRenderer for ViolinRenderer {
         });
         let offset_col = naming::aesthetic_column("offset");
 
-        // It'll be implemented as an offset.
-        let violin_offset = format!("[datum.{offset}, -datum.{offset}]", offset = offset_col);
-
         // Read orientation from layer (already resolved during execution)
         let is_horizontal = is_transposed(layer);
+
+        // It'll be implemented as an offset.
+        let mut violin_offset = format!("[datum.{offset}, -datum.{offset}]", offset = offset_col);
+        if let Some(ParameterValue::String(side)) = layer.parameters.get("side") {
+            let positive = if is_horizontal {
+                matches!(side.as_str(), "bottom" | "left")
+            } else {
+                matches!(side.as_str(), "top" | "right")
+            };
+            violin_offset = if positive {
+                format!("[datum.{offset}]", offset = offset_col)
+            } else {
+                format!("[-datum.{offset}]", offset = offset_col)
+            };
+        }
 
         // Continuous axis column for order calculation:
         // - Vertical: pos2 (y-axis has continuous density values)
@@ -1379,6 +1391,8 @@ impl GeomRenderer for ViolinRenderer {
     ) -> Result<()> {
         // Read orientation from layer (already resolved during execution)
         let is_horizontal = is_transposed(layer);
+
+        encoding.remove("offset");
 
         // Categorical axis for detail encoding:
         // - Vertical: x channel (categorical groups on x-axis)
@@ -3207,6 +3221,114 @@ mod tests {
         assert!(
             final_offset.is_some(),
             "Should have __final_offset calculation"
+        );
+    }
+
+    #[test]
+    fn test_violin_ridge_parameter() {
+        use crate::naming;
+        use crate::plot::ParameterValue;
+
+        let offset_col = naming::aesthetic_column("offset");
+
+        fn get_violin_offset_expr(ridge: Option<&str>, is_horizontal: bool) -> String {
+            let mut layer = Layer::new(crate::plot::Geom::violin());
+            if let Some(r) = ridge {
+                layer
+                    .parameters
+                    .insert("side".to_string(), ParameterValue::String(r.to_string()));
+            }
+
+            // Set orientation parameter for horizontal case
+            if is_horizontal {
+                layer.parameters.insert(
+                    "orientation".to_string(),
+                    ParameterValue::String("transposed".to_string()),
+                );
+            }
+
+            let mut layer_spec = if is_horizontal {
+                json!({
+                    "mark": {"type": "line"},
+                    "encoding": {
+                        "x": {"field": naming::aesthetic_column("pos2"), "type": "quantitative"},
+                        "y": {"field": "species", "type": "nominal"}
+                    }
+                })
+            } else {
+                json!({
+                    "mark": {"type": "line"},
+                    "encoding": {
+                        "x": {"field": "species", "type": "nominal"},
+                        "y": {"field": naming::aesthetic_column("pos2"), "type": "quantitative"}
+                    }
+                })
+            };
+
+            ViolinRenderer
+                .modify_spec(&mut layer_spec, &layer, &RenderContext::new(&[]))
+                .unwrap();
+
+            layer_spec["transform"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|t| t.get("as").and_then(|a| a.as_str()) == Some("violin_offsets"))
+                .unwrap()["calculate"]
+                .as_str()
+                .unwrap()
+                .to_string()
+        }
+
+        // Default "both" - mirrors on both sides (vertical orientation)
+        let expr = get_violin_offset_expr(None, false);
+        assert!(
+            expr.contains(&format!("[datum.{}, -datum.{}]", offset_col, offset_col))
+                || expr.contains(&format!("[-datum.{}, datum.{}]", offset_col, offset_col)),
+            "Default should mirror both sides: {}",
+            expr
+        );
+
+        // Vertical orientation (default): x=nominal, y=quantitative
+        // "left" and "bottom" - only negative offset
+        assert_eq!(
+            get_violin_offset_expr(Some("left"), false),
+            format!("[-datum.{}]", offset_col)
+        );
+        assert_eq!(
+            get_violin_offset_expr(Some("bottom"), false),
+            format!("[-datum.{}]", offset_col)
+        );
+
+        // "right" and "top" - only positive offset
+        assert_eq!(
+            get_violin_offset_expr(Some("right"), false),
+            format!("[datum.{}]", offset_col)
+        );
+        assert_eq!(
+            get_violin_offset_expr(Some("top"), false),
+            format!("[datum.{}]", offset_col)
+        );
+
+        // Horizontal orientation: x=quantitative, y=nominal
+        // "bottom" and "left" - only positive offset
+        assert_eq!(
+            get_violin_offset_expr(Some("bottom"), true),
+            format!("[datum.{}]", offset_col)
+        );
+        assert_eq!(
+            get_violin_offset_expr(Some("left"), true),
+            format!("[datum.{}]", offset_col)
+        );
+
+        // "top" and "right" - only negative offset
+        assert_eq!(
+            get_violin_offset_expr(Some("top"), true),
+            format!("[-datum.{}]", offset_col)
+        );
+        assert_eq!(
+            get_violin_offset_expr(Some("right"), true),
+            format!("[-datum.{}]", offset_col)
         );
     }
 
