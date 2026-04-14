@@ -258,7 +258,7 @@ For detailed API documentation, see [`src/doc/API.md`](src/doc/API.md).
 
 - Uses `tree-sitter-ggsql` grammar (507 lines, simplified approach)
 - Parses **full query** (SQL + VISUALISE) into concrete syntax tree (CST)
-- Grammar supports: PLOT/TABLE/MAP types, DRAW/SCALE/FACET/PROJECT/LABEL/THEME clauses
+- Grammar supports: PLOT/TABLE/MAP types, DRAW/SCALE/FACET/PROJECT/LABEL clauses
 - British and American spellings: `VISUALISE` / `VISUALIZE`
 - **SQL portion parsing**: Basic SQL structure (SELECT, WITH, CREATE, INSERT, subqueries)
 - **Recursive subquery support**: Fully recursive grammar for complex SQL
@@ -306,7 +306,6 @@ pub struct Plot {
     pub facet: Option<Facet>,          // FACET clause
     pub project: Option<Project>,          // PROJECT clause
     pub labels: Option<Labels>,        // LABEL clause
-    pub theme: Option<Theme>,          // THEME clause
 }
 
 /// Global mapping specification from VISUALISE clause
@@ -1063,7 +1062,6 @@ Where `<global_mapping>` can be:
 | `FACET`     | ❌ No      | Small multiples   | `FACET region`                            |
 | `PROJECT`   | ❌ No      | Coordinate system | `PROJECT TO cartesian`                    |
 | `LABEL`     | ❌ No      | Text labels       | `LABEL title => 'My Chart', x => 'Date'`  |
-| `THEME`     | ❌ No      | Visual styling    | `THEME minimal`                           |
 
 ### DRAW Clause (Layers)
 
@@ -1516,8 +1514,7 @@ Plot {
     Scale { aesthetic: "x", scale_type: Some(ScaleType::Date) }
   ],
   facet: Some(Facet::Wrap { variables: ["region"], scales: "fixed" }),
-  labels: Some(Labels { labels: {"title": "...", "x": "Date", "y": "Total Quantity"} }),
-  theme: Some(Theme::Minimal)
+  labels: Some(Labels { labels: {"title": "...", "x": "Date", "y": "Total Quantity"} })
 }
 ```
 
