@@ -1,1 +1,10 @@
 .Rproj.user
+src/rust/vendor
+src/rust/target
+src/Makevars
+src/Makevars.win
+src/*.o
+src/*.so
+src/*.dll
+src/rust/test_files
+inst/doc

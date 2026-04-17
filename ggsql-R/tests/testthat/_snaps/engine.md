@@ -50,5 +50,50 @@
                 (8.7, 22.3)
             ) AS t(x, y)
           ) TO 'data.csv' (HEADER, DELIMITER ',')
-      ## 2
+
+# r: prefix resolves R objects
+
+    Code
+      cat(out)
+    Output
+      SELECT mpg, disp FROM r:test_df
+      |  mpg| disp|
+      |----:|----:|
+      | 21.0|  160|
+      | 21.0|  160|
+      | 22.8|  108|
+      | 21.4|  258|
+      | 18.7|  360|
+
+# multiple r: refs in one query work
+
+    Code
+      cat(out)
+    Output
+      SELECT a.id, a.x, b.y FROM r:df_a a JOIN r:df_b b ON a.id = b.id
+      | id|  x|  y|
+      |--:|--:|--:|
+      |  1| 10| 20|
+      |  2| 11| 21|
+      |  3| 12| 22|
+
+# connection option creates a DuckDB reader
+
+    Code
+      cat(out)
+    Output
+      SELECT 1 AS x, 2 AS y
+      |  x|  y|
+      |--:|--:|
+      |  1|  2|
+
+# writer option is ignored for plain SQL
+
+    Code
+      cat(out)
+    Output
+      SELECT 1 AS x, 2 AS y
+      |  x|  y|
+      |--:|--:|
+      |  1|  2|
 
